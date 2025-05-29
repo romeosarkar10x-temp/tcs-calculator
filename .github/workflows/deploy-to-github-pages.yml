@@ -1,0 +1,38 @@
+name: Deploy to `Github Pages`
+on: [push]
+
+jobs:
+  upload-artifacts:
+    name: Upload artifacts
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload artifacts
+        id: upload_artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+      - name: Output `artifact_id`
+        run: "echo `artifact_id`: ${{ steps.upload_artifacts.outputs.artifact_id }}"
+
+  deploy-to-github-pages:
+    name: Deploy to `Github Pages`
+    runs-on: self-hosted
+    needs: upload-artifacts
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to `Github Pages`
+        id: deployment
+        uses: actions/deploy-pages@v4
