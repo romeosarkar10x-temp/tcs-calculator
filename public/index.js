@@ -1,6 +1,15 @@
 class DynamicTable {
-  constructor(DOM_container) {
+  constructor(DOM_container, initializer, id) {
     this.DOM_tableContainer = DOM_container;
+    this.initializer = initializer;
+
+    const key = "dynamicTable";
+
+    if (id != null) {
+      this.key = key + "#" + id;
+    } else {
+      this.key = key;
+    }
   }
 
   _DOM_createCell(value) {
@@ -55,8 +64,14 @@ class DynamicTable {
     this._pushRow();
   }).bind(this);
 
-  _callback_lastRowCell = ((event) => {
+  _callback_lastRowCell = (() => {
+    console.log("_callback_lastRowCell");
     this._popEmptyRows();
+  }).bind(this);
+
+  _callback_compute = ((event) => {
+    console.log("_callback_compute");
+    this._computeRow(event.target.parentNode.parentNode);
   }).bind(this);
 
   _DOM_createIncipientRow() {
@@ -74,6 +89,14 @@ class DynamicTable {
     return DOM_tr;
   }
 
+  _DOM_createRow() {
+    const DOM_tr = this._DOM_createIncipientRow();
+    this._convertIncipientRowToLastRow(DOM_tr);
+    this._convertLastRowToRow(DOM_tr);
+
+    return DOM_tr;
+  }
+
   _convertIncipientRowToLastRow(DOM_tr) {
     if (DOM_tr == null) {
       return;
@@ -87,6 +110,7 @@ class DynamicTable {
         this._callback_incipientRowCell
       );
       DOM_td.firstChild.addEventListener("input", this._callback_lastRowCell);
+      DOM_td.firstChild.addEventListener("input", this._callback_compute);
     });
   }
 
@@ -121,6 +145,7 @@ class DynamicTable {
         "input",
         this._callback_lastRowCell
       );
+      DOM_td.firstChild.removeEventListener("input", this._callback_compute);
       DOM_td.firstChild.addEventListener(
         "input",
         this._callback_incipientRowCell
@@ -165,8 +190,90 @@ class DynamicTable {
     );
   }
 
-  _computeRow() {}
-  _computeTable() {}
+  _getData() {
+    const ticket = parseFloat(document.querySelector("#ticket").value);
+    const dreampass = parseFloat(document.querySelector("#dreampass").value);
+    const lostBaggage = parseFloat(
+      document.querySelector("#lost-baggage").value
+    );
+
+    const table = [];
+
+    for (let i = 0; i < this.numberOfRows; i++) {
+      const row = [];
+
+      for (let j = 0; j < this.numberOfColumns; j++) {
+        row.push(
+          this.DOM_tableBody.childNodes.item(i).childNodes.item(j).firstChild
+            .value
+        );
+      }
+
+      table.push(row);
+    }
+
+    return {
+      ticket,
+      dreampass,
+      lostBaggage,
+      table,
+    };
+  }
+
+  _computeRow(DOM_tr) {
+    let indexRow = 0;
+    let indexColumn = 0;
+
+    {
+      // Find indexRow
+      let i = 0;
+
+      this.DOM_tableBody.childNodes.forEach((e) => {
+        if (e == DOM_tr) {
+          indexRow = i;
+        }
+
+        i++;
+      });
+
+      console.log("indexRow", indexRow);
+    }
+
+    function filter(value) {
+      if (value == null) {
+        return "?";
+      }
+
+      if (isNaN(value)) {
+        return "?";
+      }
+
+      return value;
+    }
+
+    DOM_tr.childNodes.forEach((DOM_td) => {
+      const DOM_input = DOM_td.firstChild;
+      const f = this.initializer[indexColumn].f;
+
+      if (typeof f === "function") {
+        DOM_input.value = filter(
+          this.initializer[indexColumn].f(
+            this._getData(),
+            indexRow,
+            indexColumn
+          )
+        );
+      }
+
+      indexColumn++;
+    });
+  }
+
+  computeTable = (() => {
+    for (let i = 0; i < this.numberOfRows; i++) {
+      this._computeRow(this.DOM_tableBody.childNodes.item(i));
+    }
+  }).bind(this);
 
   _initializeTable() {
     this.numberOfRows = 0;
@@ -181,22 +288,7 @@ class DynamicTable {
     DOM_tableHead.appendChild(DOM_tableHeadRow);
     DOM_table.appendChild(DOM_tableBody);
 
-    [
-      { name: "Name" },
-      { name: "Tier" },
-      {
-        name: "Price",
-        f: function () {
-          return 0;
-        },
-      },
-      {
-        name: "Ticket + TCS",
-        f: function () {
-          return 0;
-        },
-      },
-    ].forEach((element) => {
+    this.initializer.forEach((element) => {
       DOM_tableHeadRow.appendChild(this._DOM_createHeadCell(element.name));
       this.numberOfColumns++;
     });
@@ -223,13 +315,11 @@ class DynamicTable {
     console.log(this.numberOfRows, this.numberOfColumns);
 
     for (let i = 0; i < this.numberOfRows; i++) {
-      const DOM_tr = document.createElement("tr");
+      const DOM_tr = this._DOM_createRow();
 
       for (let j = 0; j < this.numberOfColumns; j++) {
-        const DOM_td = this._DOM_createCell(
-          state[i * this.numberOfColumns + j + 2]
-        );
-        DOM_tr.appendChild(DOM_td);
+        DOM_tr.childNodes.item(j).firstChild.value =
+          state[i * this.numberOfColumns + j + 2];
       }
 
       this.DOM_tableBody.appendChild(DOM_tr);
@@ -256,8 +346,13 @@ class DynamicTable {
     return string?.split(",");
   }
 
+  reset() {
+    this.numberOfRows = 0;
+  }
+
   save() {
     if (this.numberOfRows === 0) {
+      localStorage.removeItem(this.key);
       return;
     }
 
@@ -275,17 +370,45 @@ class DynamicTable {
     }
 
     console.log("stored", this._stringify(v));
-    window.localStorage.setItem("dynamicTable", this._stringify(v));
+    window.localStorage.setItem(this.key, this._stringify(v));
   }
 
   load() {
     this._initializeTable();
-    const v = this._parse(localStorage.getItem("dynamicTable"));
+    const v = this._parse(localStorage.getItem(this.key));
 
-    if (v == null) {
-      this._initializeDefault();
-    } else {
+    const isValid = () => {
+      if (v == null) {
+        return false;
+      }
+
+      if (!Array.isArray(v)) {
+        return false;
+      }
+
+      if (v.length < 2 + this.initializer.length) {
+        return false;
+      }
+
+      if (isNaN(parseInt(v[0])) || isNaN(parseInt(v[1]))) {
+        return false;
+      }
+
+      if (this.initializer.length !== parseInt(v[1])) {
+        return false;
+      }
+
+      if (parseInt(v[0]) * parseInt(v[1]) + 2 !== v.length) {
+        return false;
+      }
+
+      return true;
+    };
+
+    if (isValid()) {
       this._initializeState(v);
+    } else {
+      this._initializeDefault();
     }
 
     console.log("loaded!!");
@@ -294,12 +417,65 @@ class DynamicTable {
 
 window.addEventListener("DOMContentLoaded", () => {
   window.dynamicTable = new DynamicTable(
-    document.querySelector(".table-container")
+    /*
+    data: {
+      "ticket": Number,
+      "dreampass": Number,
+      "lostBaggage": Number,
+      "table": String[][],
+    }
+    */
+
+    document.querySelector(".table-container"),
+    [
+      { name: "Name" },
+      { name: "Tier (%)" },
+      {
+        name: "Final price",
+        f: function (data, indexRow, indexColumn) {
+          console.log("Ticket + TCS", data);
+          const tier = parseInt(data.table[indexRow][1]);
+
+          return (data.ticket * (tier + 100)) / 100;
+        },
+      },
+    ]
   );
 
+  const DOM_inputTicket = document.querySelector("#ticket");
+  const DOM_inputDreampass = document.querySelector("#dreampass");
+  const DOM_inputLostBaggage = document.querySelector("#lost-baggage");
+
+  const DOM_nodes = [DOM_inputTicket, DOM_inputDreampass, DOM_inputLostBaggage];
+
+  DOM_nodes.forEach((DOM_node) => {
+    DOM_node.addEventListener("input", window.dynamicTable.computeTable);
+  });
+
+  function save() {
+    window.localStorage.setItem(
+      "input",
+      DOM_nodes.map((DOM_node) => DOM_node.value).join(",")
+    );
+  }
+
+  function load() {
+    const v = window.localStorage.getItem("input")?.split(",");
+
+    if (v == null) {
+      return;
+    }
+
+    v.forEach((e, i) => {
+      DOM_nodes[i].value = e;
+    });
+  }
+
   window.dynamicTable.load();
+  load();
 
   window.addEventListener("unload", () => {
     window.dynamicTable.save();
+    save();
   });
 });
