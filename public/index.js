@@ -427,35 +427,25 @@ class DynamicTable {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  window.pTable = new DynamicTable(
-    /*
-    data: {
-      "ticket": Number,
-      "dreampass": Number,
-      "lostBaggage": Number,
-      "table": String[][],
-    }
-    */
-
-    document.querySelector("#p-table-container.table-container"),
+  window.tcsTable = new DynamicTable(
+    document.querySelector("#tcs_table-container.table-container"),
     [
       { name: "Name" },
       { name: "Tier (%)" },
       {
         name: "Final price",
         f: function (data, indexRow, indexColumn) {
-          console.log("Ticket + TCS", data);
           const tier = parseInt(data.table[indexRow][1]);
 
           return (data.ticket * (tier + 100)) / 100;
         },
       },
     ],
-    "p"
+    "tcs"
   );
 
-  window.dpTable = new DynamicTable(
-    document.querySelector("#dp-table-container.table-container"),
+  window.dreampassTable = new DynamicTable(
+    document.querySelector("#dreampass_table-container.table-container"),
     [
       { name: "Name" },
       { name: "Dreampass price" },
@@ -467,14 +457,31 @@ window.addEventListener("DOMContentLoaded", () => {
         },
       },
     ],
-    "dp"
+    "dreampass"
+  );
+
+  window.lostBaggageTable = new DynamicTable(
+    document.querySelector("#lost-baggage_table-container.table-container"),
+    [
+      { name: "Name" },
+      { name: "Lost baggage charges" },
+      {
+        name: "Final price",
+        f: function (data, indexRow, indexColumn) {
+          const dreampassPrice = parseInt(data.table[indexRow][1]);
+          return parseInt(data.ticket) + dreampassPrice;
+        },
+      },
+    ],
+    "lost-baggage"
   );
 
   const DOM_inputs = document.querySelectorAll("input.input");
 
   DOM_inputs.forEach((DOM_input) => {
-    DOM_input.addEventListener("input", window.pTable.computeTable);
-    DOM_input.addEventListener("input", window.dpTable.computeTable);
+    DOM_input.addEventListener("input", window.tcsTable.computeTable);
+    DOM_input.addEventListener("input", window.dreampassTable.computeTable);
+    DOM_input.addEventListener("input", window.lostBaggageTable.computeTable);
   });
 
   function save() {
@@ -509,13 +516,15 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  window.pTable.load();
-  window.dpTable.load();
+  window.tcsTable.load();
+  window.dreampassTable.load();
+  window.lostBaggageTable.load();
   load();
 
   window.addEventListener("unload", () => {
-    window.pTable.save();
-    window.dpTable.save();
+    window.tcsTable.save();
+    window.dreampassTable.save();
+    window.lostBaggageTable.save();
     save();
   });
 });
