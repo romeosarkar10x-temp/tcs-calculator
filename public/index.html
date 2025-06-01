@@ -45,8 +45,16 @@
       }
 
       .table-container {
+        margin-top: 2em;
         display: flex;
+        flex-direction: column;
         justify-content: center;
+        align-items: center;
+      }
+
+      .table-container button.reset {
+        margin-top: 0.5em;
+        cursor: pointer;
       }
 
       table {
@@ -106,10 +114,8 @@
       <p>
         Lost baggage: <input class="input" id="lost-baggage" type="number" />
       </p>
-      <p>- - - - - - - - - - - - - - - - - - - - - - - - - -</p>
-      <p><button>Reset table</button></p>
-      <div class="p-table-container"></div>
-      <div class="dp-table-container"></div>
+      <div class="table-container" id="p-table-container"></div>
+      <div class="table-container" id="dp-table-container"></div>
     </main>
   </body>
   <script src="./index.js"></script>

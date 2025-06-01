@@ -291,8 +291,24 @@ class DynamicTable {
     this.DOM_table = DOM_table;
     this.DOM_tableBody = DOM_tableBody;
 
+    const DOM_resetButton = document.createElement("button");
+    DOM_resetButton.classList.add("reset");
+    DOM_resetButton.textContent = "Reset table";
+
+    DOM_resetButton.addEventListener("click", () => {
+      const res = window.confirm(
+        "Are you sure you want to reset this table? This action will permanently delete all data and cannot be undone. All rows, entries, and information currently stored in the table will be lost forever."
+      );
+
+      if (res) {
+        this.reset();
+      }
+    });
+
     this.DOM_tableContainer.appendChild(DOM_table);
+    this.DOM_tableContainer.appendChild(DOM_resetButton);
   }
+
   _initializeDefault() {
     console.log("initializeDefault");
     {
@@ -342,7 +358,7 @@ class DynamicTable {
   }
 
   reset() {
-    this.numberOfRows = 0;
+    // this._initializeDefault();
   }
 
   save() {
@@ -421,7 +437,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     */
 
-    document.querySelector(".p-table-container"),
+    document.querySelector("#p-table-container.table-container"),
     [
       { name: "Name" },
       { name: "Tier (%)" },
@@ -439,7 +455,7 @@ window.addEventListener("DOMContentLoaded", () => {
   );
 
   window.dpTable = new DynamicTable(
-    document.querySelector(".dp-table-container"),
+    document.querySelector("#dp-table-container.table-container"),
     [
       { name: "Name" },
       { name: "Dreampass price" },
