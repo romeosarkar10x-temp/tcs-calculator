@@ -1,1 +1,1 @@
-TCS Caluculator
+TCS Calculator
