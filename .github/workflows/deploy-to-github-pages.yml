@@ -4,7 +4,7 @@ on: [push]
 jobs:
   upload-artifacts:
     name: Upload artifacts
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -21,7 +21,7 @@ jobs:
 
   deploy-to-github-pages:
     name: Deploy to `Github Pages`
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: upload-artifacts
 
     permissions:
